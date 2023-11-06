@@ -17,6 +17,9 @@ import session from "express-session";
 import { ObjectId } from "mongodb";
 import Team from "./models/Team";
 import TeamMembers from "./models/TeamMembers";
+import Task from "./models/Task";
+import Assigning, { TAssigned } from "./models/Assigning";
+import Attachment, { TAt } from "./models/Attachment";
 const uri: string | undefined = process.env.DB_URL;
 const port = process.env.PORT;
 
@@ -405,6 +408,31 @@ async function connectMongo() {
 
         const result = await TeamMembers.create(body);
         return res.status(200).json({ success: true, error: false, result });
+      });
+
+      app.post("/store-task", async (req: Request, res: Response) => {
+        const { body } = req;
+        const result1 = await Task.create(body.task);
+        let result2: any;
+        let result3: any;
+        if (result1._id) {
+          if (body?.assignings?.length > 0) {
+            body?.assignings?.forEach((element: TAssigned) => {
+              element.taskId = result1._id;
+            });
+            result2 = await Assigning.insertMany(body.assignings);
+          }
+          if (body?.attachments?.length > 0) {
+            body.attachments?.forEach((element: TAt) => {
+              element.parentId = result1._id;
+            });
+            result3 = await Attachment.insertMany(body.attachments);
+          }
+        }
+
+        return res
+          .status(200)
+          .json({ success: true, error: false, result1, result2, result3 });
       });
     }
   } finally {
