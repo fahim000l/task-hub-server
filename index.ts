@@ -174,6 +174,42 @@ async function connectMongo() {
                   {
                     $match: { email: decoded.email },
                   },
+                  {
+                    $lookup: {
+                      from: "todos",
+                      localField: "email",
+                      foreignField: "user",
+                      as: "todos",
+                    },
+                  },
+                  {
+                    $lookup: {
+                      from: "teammembers",
+                      localField: "email",
+                      foreignField: "user",
+                      as: "memberships",
+                      pipeline: [
+                        {
+                          $lookup: {
+                            from: "teams",
+                            localField: "teamId",
+                            foreignField: "_id",
+                            as: "teamInfo",
+                            pipeline: [
+                              {
+                                $lookup: {
+                                  from: "users",
+                                  localField: "leader",
+                                  foreignField: "email",
+                                  as: "leaderInfo",
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
                 ]);
 
                 return res.status(200).json(sessionUser);
@@ -316,6 +352,16 @@ async function connectMongo() {
         return res.status(200).json(allTeams);
       });
 
+      app.get("/get-all-user", async (req: Request, res: Response) => {
+        const allUser = await User.aggregate([
+          {
+            $match: {},
+          },
+        ]);
+
+        return res.status(200).json(allUser);
+      });
+
       app.get("/get-team-by-id", async (req: Request, res: Response) => {
         const { query } = req;
 
@@ -352,6 +398,13 @@ async function connectMongo() {
         ]);
 
         return res.status(200).json(team);
+      });
+
+      app.post("/add-team-member", async (req: Request, res: Response) => {
+        const { body } = req;
+
+        const result = await TeamMembers.create(body);
+        return res.status(200).json({ success: true, error: false, result });
       });
     }
   } finally {
