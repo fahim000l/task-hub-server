@@ -44,7 +44,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      callbackURL: "http://localhost:5000/auth/google/callback",
+      callbackURL: `${process.env.SERVER_DOMAIN}/auth/google/callback`,
     },
     async (assessToen, refreshToken, profile, done) => {
       const isExist = await User.findOne({ email: profile._json.email });
