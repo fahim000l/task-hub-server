@@ -20,6 +20,7 @@ import TeamMembers from "./models/TeamMembers";
 import Task from "./models/Task";
 import Assigning, { TAssigned } from "./models/Assigning";
 import Attachment, { TAt } from "./models/Attachment";
+import Submission from "./models/Submission";
 const uri: string | undefined = process.env.DB_URL;
 const port = process.env.PORT;
 
@@ -398,6 +399,42 @@ async function connectMongo() {
               ],
             },
           },
+          {
+            $lookup: {
+              from: "tasks",
+              localField: "_id",
+              foreignField: "teamId",
+              as: "tasks",
+              pipeline: [
+                {
+                  $lookup: {
+                    from: "assignings",
+                    localField: "_id",
+                    foreignField: "taskId",
+                    as: "assignings",
+                    pipeline: [
+                      {
+                        $lookup: {
+                          from: "users",
+                          localField: "user",
+                          foreignField: "email",
+                          as: "assignedTo",
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  $lookup: {
+                    from: "attachments",
+                    localField: "_id",
+                    foreignField: "parentId",
+                    as: "attachments",
+                  },
+                },
+              ],
+            },
+          },
         ]);
 
         return res.status(200).json(team);
@@ -433,6 +470,89 @@ async function connectMongo() {
         return res
           .status(200)
           .json({ success: true, error: false, result1, result2, result3 });
+      });
+
+      app.get("/get-task-by-id", async (req: Request, res: Response) => {
+        const { query } = req;
+
+        const task = await Task.aggregate([
+          {
+            $match: { _id: new ObjectId(query.taskId as string) },
+          },
+          {
+            $lookup: {
+              from: "assignings",
+              localField: "_id",
+              foreignField: "taskId",
+              as: "assignings",
+              pipeline: [
+                {
+                  $lookup: {
+                    from: "users",
+                    localField: "user",
+                    foreignField: "email",
+                    as: "assignedTo",
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $lookup: {
+              from: "attachments",
+              localField: "_id",
+              foreignField: "parentId",
+              as: "attachments",
+            },
+          },
+          {
+            $lookup: {
+              from: "submissions",
+              localField: "_id",
+              foreignField: "taskId",
+              as: "submissions",
+              pipeline: [
+                {
+                  $lookup: {
+                    from: "users",
+                    localField: "user",
+                    foreignField: "email",
+                    as: "submittedBy",
+                  },
+                },
+                {
+                  $lookup: {
+                    from: "attachments",
+                    localField: "_id",
+                    foreignField: "parentId",
+                    as: "attachments",
+                  },
+                },
+              ],
+            },
+          },
+        ]);
+
+        return res.status(200).json(task);
+      });
+
+      app.post("/store-submission", async (req: Request, res: Response) => {
+        const { body } = req;
+
+        const result1 = await Submission.create(body.submission);
+        let result2: any;
+        if (result1?._id) {
+          if (body?.attachments?.length > 0) {
+            body.attachments?.forEach((element: TAt) => {
+              element.parentId = result1._id;
+            });
+            result2 = await Attachment.insertMany(body.attachments);
+          }
+        }
+
+        return res
+          .status(200)
+          .json({ success: true, error: false, result1, result2 });
       });
     }
   } finally {

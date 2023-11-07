@@ -1,6 +1,7 @@
 import { Schema, model, models } from "mongoose";
 
 export interface Ttask {
+  teamId: Schema.Types.ObjectId;
   taskName: string;
   work: string;
   assign: "all" | "specific";
@@ -35,6 +36,10 @@ const taskSchema = new Schema<Ttask>(
     },
     work: {
       type: String,
+      required: true,
+    },
+    teamId: {
+      type: Schema.ObjectId,
       required: true,
     },
   },
