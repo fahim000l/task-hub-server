@@ -208,6 +208,96 @@ async function connectMongo() {
                                   as: "leaderInfo",
                                 },
                               },
+                              {
+                                $lookup: {
+                                  from: "tasks",
+                                  localField: "_id",
+                                  foreignField: "teamId",
+                                  as: "tasks",
+                                  pipeline: [
+                                    {
+                                      $lookup: {
+                                        from: "assignings",
+                                        localField: "_id",
+                                        foreignField: "taskId",
+                                        as: "assignings",
+                                        pipeline: [
+                                          {
+                                            $lookup: {
+                                              from: "users",
+                                              localField: "user",
+                                              foreignField: "email",
+                                              as: "assignedTo",
+                                            },
+                                          },
+                                        ],
+                                      },
+                                    },
+                                    {
+                                      $lookup: {
+                                        from: "attachments",
+                                        localField: "_id",
+                                        foreignField: "parentId",
+                                        as: "attachments",
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                  {
+                    $lookup: {
+                      from: "assignings",
+                      localField: "email",
+                      foreignField: "user",
+                      as: "assignings",
+                      pipeline: [
+                        {
+                          $lookup: {
+                            from: "tasks",
+                            localField: "taskId",
+                            foreignField: "_id",
+                            as: "taskInfo",
+                            pipeline: [
+                              {
+                                $lookup: {
+                                  from: "assignings",
+                                  localField: "_id",
+                                  foreignField: "taskId",
+                                  as: "assignings",
+                                  pipeline: [
+                                    {
+                                      $lookup: {
+                                        from: "users",
+                                        localField: "user",
+                                        foreignField: "email",
+                                        as: "assignedTo",
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                              {
+                                $lookup: {
+                                  from: "attachments",
+                                  localField: "_id",
+                                  foreignField: "parentId",
+                                  as: "attachments",
+                                },
+                              },
+                              {
+                                $lookup: {
+                                  from: "teams",
+                                  localField: "teamId",
+                                  foreignField: "_id",
+                                  as: "teamInfo",
+                                },
+                              },
                             ],
                           },
                         },
